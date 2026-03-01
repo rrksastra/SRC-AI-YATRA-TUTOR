@@ -6,12 +6,14 @@ from utils import load_pdf_with_pages
 from rag import RAG
 from ai import generate_answer
 
+print("🚀 SERVER STARTING...")
+
 app = FastAPI()
-rag = RAG()
+
+rag = None  # 🔥 IMPORTANT
 
 os.makedirs("data", exist_ok=True)
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,9 +30,14 @@ def home():
 def health():
     return {"status": "ok"}
 
-# Upload PDF
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)):
+    global rag
+
+    if rag is None:
+        print("📦 Loading RAG model...")
+        rag = RAG()
+
     path = f"data/{file.filename}"
 
     with open(path, "wb") as buffer:
@@ -41,13 +48,12 @@ async def upload(file: UploadFile = File(...)):
 
     return {"message": "PDF processed"}
 
-# Ask question
 @app.post("/ask")
 async def ask(question: str = Form(...), lang: str = Form("english")):
-    docs = rag.search(question)
+    if rag is None:
+        return {"answer": "Upload PDF first 📄", "source": []}
 
-    if not docs:
-        return {"answer": "Please upload PDF first 📄", "source": []}
+    docs = rag.search(question)
 
     context = ""
     pages = set()
@@ -63,7 +69,7 @@ async def ask(question: str = Form(...), lang: str = Form("english")):
         "source": list(pages)
     }
 
-# 🔥 IMPORTANT FOR RENDER
+# Render run
 import uvicorn
 
 if __name__ == "__main__":
