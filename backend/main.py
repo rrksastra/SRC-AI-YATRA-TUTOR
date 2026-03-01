@@ -11,7 +11,7 @@ rag = RAG()
 
 os.makedirs("data", exist_ok=True)
 
-# Enable CORS
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,9 +22,13 @@ app.add_middleware(
 
 @app.get("/")
 def home():
-    return {"message": "AI Tutor Running"}
+    return {"message": "AI Tutor Running 🚀"}
 
-# 📄 Upload PDF
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+# Upload PDF
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)):
     path = f"data/{file.filename}"
@@ -37,10 +41,13 @@ async def upload(file: UploadFile = File(...)):
 
     return {"message": "PDF processed"}
 
-# 💬 Ask Question
+# Ask question
 @app.post("/ask")
 async def ask(question: str = Form(...), lang: str = Form("english")):
     docs = rag.search(question)
+
+    if not docs:
+        return {"answer": "Please upload PDF first 📄", "source": []}
 
     context = ""
     pages = set()
@@ -55,3 +62,10 @@ async def ask(question: str = Form(...), lang: str = Form("english")):
         "answer": answer,
         "source": list(pages)
     }
+
+# 🔥 IMPORTANT FOR RENDER
+import uvicorn
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
