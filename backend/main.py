@@ -2,15 +2,11 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 import shutil, os
 
-from utils import load_pdf_with_pages
-from rag import RAG
-from ai import generate_answer
-
 print("🚀 SERVER STARTING...")
 
 app = FastAPI()
 
-rag = None  # 🔥 IMPORTANT
+rag = None
 
 os.makedirs("data", exist_ok=True)
 
@@ -35,7 +31,8 @@ async def upload(file: UploadFile = File(...)):
     global rag
 
     if rag is None:
-        print("📦 Loading RAG model...")
+        print("📦 Loading RAG...")
+        from rag import RAG
         rag = RAG()
 
     path = f"data/{file.filename}"
@@ -43,7 +40,9 @@ async def upload(file: UploadFile = File(...)):
     with open(path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
+    from utils import load_pdf_with_pages
     pages = load_pdf_with_pages(path)
+
     rag.add(pages)
 
     return {"message": "PDF processed"}
@@ -62,6 +61,7 @@ async def ask(question: str = Form(...), lang: str = Form("english")):
         context += d["text"] + "\n"
         pages.add(d["page"])
 
+    from ai import generate_answer
     answer = generate_answer(context, question, lang)
 
     return {
@@ -69,7 +69,6 @@ async def ask(question: str = Form(...), lang: str = Form("english")):
         "source": list(pages)
     }
 
-# Render run
 import uvicorn
 
 if __name__ == "__main__":
